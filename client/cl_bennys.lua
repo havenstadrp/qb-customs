@@ -1,9 +1,11 @@
-local QBCore = exports['qb-core']:GetCoreObject()
+-----------------------
+----   Variables   ----
+-----------------------
+QBCore = exports['qb-core']:GetCoreObject()
+local PlayerData = QBCore.Functions.GetPlayerData()
+local CustomsData = {}
 
 local isPlyInBennys = false
-local plyFirstJoin = false
-local nearDefault = false
-local bennyHeading = 319.73135375977
 local originalCategory = nil
 local originalMod = nil
 local originalPrimaryColour = nil
@@ -25,39 +27,82 @@ local originalNeonColourB = nil
 local originalXenonColour = nil
 local originalOldLivery = nil
 local originalPlateIndex = nil
+local originalXenonState = nil
+local originalTurboState = nil
 local attemptingPurchase = false
 local isPurchaseSuccessful = false
-local bennyLocation
+local radialMenuItemId = nil
 
---Blips
-
-CreateThread(function()
-    for k, v in pairs(bennyGarages) do
-        if v.blip then
-        local blip = AddBlipForCoord(v.coords.x,v.coords.y,v.coords.z)
-        SetBlipSprite(blip, 72)
-        SetBlipScale(blip, 0.7)
-        SetBlipAsShortRange(blip,true)
-        BeginTextCommandSetBlipName("STRING")
-        AddTextComponentString("Benny's Motorworks")
-        EndTextCommandSetBlipName(blip)
-        end
-    end
-end)
+-----------------------
+----   Functions   ----
+-----------------------
 
 --#[Local Functions]#--
-local function isNear(pos1, pos2, distMustBe)
-    local diff = pos2 - pos1
-	local dist = (diff.x * diff.x) + (diff.y * diff.y)
-
-	return (dist < (distMustBe * distMustBe))
-end
-
 local function saveVehicle()
     local plyPed = PlayerPedId()
     local veh = GetVehiclePedIsIn(plyPed, false)
     local myCar = QBCore.Functions.GetVehicleProperties(veh)
-    TriggerServerEvent('updateVehicle',myCar)
+    TriggerServerEvent('qb-customs:server:updateVehicle', myCar)
+end
+
+local function CreateBlip(blipData)
+    local blip = AddBlipForCoord(blipData.coords.x, blipData.coords.y, blipData.coords.z)
+    SetBlipSprite(blip, blipData.sprite)
+    SetBlipDisplay(blip, blipData.display)
+    SetBlipScale(blip, blipData.scale)
+    SetBlipAsShortRange(blip, true)
+    SetBlipColour(blip, blipData.color)
+    BeginTextCommandSetBlipName("STRING")
+    AddTextComponentSubstringPlayerName(blipData.label)
+    EndTextCommandSetBlipName(blip)
+end
+
+local function AllowJob(restrictionData, job)
+    if type(restrictionData.job) == "table" then
+        for _,restrictedJob in ipairs(restrictionData.job) do
+            if restrictedJob == job then return true end
+        end
+    else
+        if restrictionData.job == "any" or restrictionData.job == job or not restrictionData.job then return true end
+    end
+    if Config.Debug then print('Denied for not having allowed job. ('..job..')') end
+    return false
+end
+
+local function AllowGang(restrictionData, gang)
+    if type(restrictionData.gang) == "table" then
+        for _,restrictedGang in ipairs(restrictionData.gang) do
+            if restrictedGang == gang then return true end
+        end
+    else
+        if restrictionData.gang == "any" or restrictionData.gang == gang or not restrictionData.gang then return true end
+    end
+    if Config.Debug then print('Denied for not having allowed gang. ('..gang..')') end
+    return false
+end
+
+local function AllowVehicleClass(restrictionData, vehicle)
+    local vehicleClass = GetVehicleClass(vehicle)
+
+    if restrictionData.deniedClasses then
+        for _,class in ipairs(restrictionData.deniedClasses) do
+            if vehicleClass == class then
+                if Config.Debug then print('Denied for having denied vehicle class. ('..vehicleClass..')') end
+                return false
+            end
+        end
+    end
+
+    if restrictionData.allowedClasses then
+        for _,class in ipairs(restrictionData.allowedClasses) do
+            if vehicleClass == class then return true end
+        end
+    end
+
+
+    if (restrictionData.allowedClasses and restrictionData.allowedClasses[1] == nil) or not restrictionData.allowedClasses or vehicleClass == 0 then return true end
+    if Config.Debug then print('Denied for not having allowed vehicle class. ('..vehicleClass..')') end
+    return false
 end
 
 --#[Global Functions]#--
@@ -66,7 +111,7 @@ function AttemptPurchase(type, upgradeLevel)
     if upgradeLevel ~= nil then
         upgradeLevel = upgradeLevel + 2
     end
-    TriggerServerEvent("qb-customs:attemptPurchase", type, upgradeLevel)
+    TriggerServerEvent("qb-customs:server:attemptPurchase", type, upgradeLevel)
 
     attemptingPurchase = true
 
@@ -90,7 +135,8 @@ function RepairVehicle()
 	SetVehicleDirtLevel(plyVeh, 0.0)
     SetVehiclePetrolTankHealth(plyVeh, 4000.0)
     SetVehicleFuelLevel(plyVeh, getFuel)
-    TriggerEvent('veh.randomDegredation',10,plyVeh,3)
+
+    for i = 0,5 do SetVehicleTyreFixed(plyVeh, i) end
 end
 
 function GetCurrentMod(id)
@@ -117,11 +163,7 @@ function GetCurrentCustomWheelState()
     local plyVeh = GetVehiclePedIsIn(plyPed, false)
     local state = GetVehicleModVariation(plyVeh, 23)
 
-    if state then
-        return 1
-    else
-        return 0
-    end
+    return state and 1 or 0
 end
 
 function GetOriginalWheel()
@@ -152,11 +194,7 @@ function GetCurrentNeonState(id)
     local plyVeh = GetVehiclePedIsIn(plyPed, false)
     local isEnabled = IsVehicleNeonLightEnabled(plyVeh, id)
 
-    if isEnabled then
-        return 1
-    else
-        return 0
-    end
+    return isEnabled and 1 or 0
 end
 
 function GetCurrentNeonColour()
@@ -172,11 +210,7 @@ function GetCurrentXenonState()
     local plyVeh = GetVehiclePedIsIn(plyPed, false)
     local isEnabled = IsToggleModOn(plyVeh, 22)
 
-    if isEnabled then
-        return 1
-    else
-        return 0
-    end
+    return isEnabled and 1 or 0
 end
 
 function GetCurrentXenonColour()
@@ -191,11 +225,7 @@ function GetCurrentTurboState()
     local plyVeh = GetVehiclePedIsIn(plyPed, false)
     local isEnabled = IsToggleModOn(plyVeh, 18)
 
-    if isEnabled then
-        return 1
-    else
-        return 0
-    end
+    return isEnabled and 0 or -1
 end
 
 function GetCurrentExtraState(extra)
@@ -371,6 +401,18 @@ function RestorePlateIndex()
     SetVehicleNumberPlateTextIndex(plyVeh, originalPlateIndex)
 end
 
+function RestoreXenonState()
+    local plyPed = PlayerPedId()
+    local plyVeh = GetVehiclePedIsIn(plyPed, false)
+    ToggleVehicleMod(plyVeh, 22, originalXenonState)
+end
+
+function RestoreTurboState()
+    local plyPed = PlayerPedId()
+    local plyVeh = GetVehiclePedIsIn(plyPed, false)
+    ToggleVehicleMod(plyVeh, 18, originalTurboState)
+end
+
 function PreviewMod(categoryID, modID)
     local plyPed = PlayerPedId()
     local plyVeh = GetVehiclePedIsIn(plyPed, false)
@@ -399,6 +441,29 @@ function PreviewWindowTint(windowTintID)
 
     SetVehicleWindowTint(plyVeh, windowTintID)
 end
+
+function PreviewXenonState(state)
+    local plyPed = PlayerPedId()
+    local plyVeh = GetVehiclePedIsIn(plyPed, false)
+
+    if originalXenonState == nil then
+        originalXenonState = IsToggleModOn(plyVeh, 22)
+    end
+
+    ToggleVehicleMod(plyVeh, 22, state)
+end
+
+function PreviewTurboState(state)
+    local plyPed = PlayerPedId()
+    local plyVeh = GetVehiclePedIsIn(plyPed, false)
+
+    if originalTurboState == nil then
+        originalTurboState = IsToggleModOn(plyVeh, 18)
+    end
+
+    ToggleVehicleMod(plyVeh, 18, state)
+end
+
 
 function PreviewColour(paintType, paintCategory, paintID)
     local plyPed = PlayerPedId()
@@ -516,6 +581,7 @@ function ApplyMod(categoryID, modID)
 
     if categoryID == 18 then
         ToggleVehicleMod(plyVeh, categoryID, modID)
+        originalTurboState = modID
     elseif categoryID == 11 or categoryID == 12 or categoryID== 13 or categoryID == 15 or categoryID == 16 then --Performance Upgrades
         originalCategory = categoryID
         originalMod = modID
@@ -682,7 +748,6 @@ function ExitBennys()
     saveVehicle()
 
     DisplayMenuContainer(false)
-
     FreezeEntityPosition(plyVeh, false)
     SetEntityCollision(plyVeh, true, true)
 
@@ -690,28 +755,72 @@ function ExitBennys()
         DestroyMenus()
     end)
 
+    if next(CustomsData) then
+        SetupInteraction()
+    end
+
     isPlyInBennys = false
 end
 
-RegisterNetEvent('event:control:bennys', function(useID)
-    if IsPedInAnyVehicle(PlayerPedId(), false) then
-        bennyHeading = bennyGarages[useID].coords.w
-        if not isPlyInBennys then -- Bennys
-            enterLocation(bennyLocation)
-        end
-    end
-end)
 
-function enterLocation(locationsPos)
+function EnterLocation(override)
+    local locationData = Config.Locations[CustomsData.location]
+    local categories = (override and override.categories) or {
+        repair = false,
+        mods = false,
+        armor = false,
+        respray = false,
+        liveries = false,
+        wheels = false,
+        tint = false,
+        plate = false,
+        extras = false,
+        neons = false,
+        xenons = false,
+        horn = false,
+        turbo = false,
+        cosmetics = false,
+    }
+
+    local canEnter = false
+    local repairOnly = true
+    if next(CustomsData) then
+        for k,v in pairs(locationData.categories) do
+            if not canEnter and v then
+                if k ~= "repair" then repairOnly = false end
+                canEnter = true
+            end
+            categories[k] = v
+        end
+    elseif override then canEnter = true end
+
+    if Config.Debug then
+        print('***************************************************************************')
+        print(string.format('EnterLocation Debug Start | CanEnter: %s | Repair Only: %s | Override: %s', canEnter, repairOnly, json.encode(override)))
+        print('***************************************************************************')
+        if next(locationData) then for k,v in pairs(locationData) do print(k, json.encode(v)) end end
+        for k,v in pairs(categories) do print(k,v) end
+        print('***************************************************************************')
+        print('EnterLocation Debug End')
+        print('***************************************************************************')
+    end
+
+    if not canEnter then
+        QBCore.Functions.Notify('You cant do anything here!')
+        ExitBennys()
+        return
+    end
+
+    if Config.UseRadial then
+        exports['qb-radialmenu']:RemoveOption(radialMenuItemId)
+        radialMenuItemId = nil
+    end
+
+    exports['qb-core']:HideText()
+
     local plyPed = PlayerPedId()
     local plyVeh = GetVehiclePedIsIn(plyPed, false)
     local isMotorcycle = false
-
-    SetVehicleModKit(plyVeh, 0)
-    SetEntityCoords(plyVeh, locationsPos)
-    SetEntityHeading(plyVeh, bennyHeading)
-    FreezeEntityPosition(plyVeh, true)
-    SetEntityCollision(plyVeh, false, true)
 
     if GetVehicleClass(plyVeh) == 8 then --Motorcycle
         isMotorcycle = true
@@ -719,7 +828,14 @@ function enterLocation(locationsPos)
         isMotorcycle = false
     end
 
-    InitiateMenus(isMotorcycle, GetVehicleBodyHealth(plyVeh))
+    SetVehicleModKit(plyVeh, 0)
+    SetEntityCoords(plyVeh, ((override and override.coords) or CustomsData.coords))
+    SetEntityHeading(plyVeh, ((override and override.heading) or CustomsData.heading))
+    FreezeEntityPosition(plyVeh, true)
+    SetEntityCollision(plyVeh, false, true)
+
+    local welcomeLabel = (locationData and locationData.settings.welcomeLabel) or "Welcome to Benny's Motorworks!"
+    InitiateMenus(isMotorcycle, GetVehicleBodyHealth(plyVeh), categories, welcomeLabel)
 
     SetTimeout(100, function()
         if GetVehicleBodyHealth(plyVeh) < 1000.0 then
@@ -733,108 +849,220 @@ function enterLocation(locationsPos)
     end)
 
     isPlyInBennys = true
+    DisableControls(repairOnly)
 end
 
 
-function disableControls()
-    DisableControlAction(1, 38, true) --Key: E
-    DisableControlAction(1, 172, true) --Key: Up Arrow
-    DisableControlAction(1, 173, true) --Key: Down Arrow
-    DisableControlAction(1, 177, true) --Key: Backspace
-    DisableControlAction(1, 176, true) --Key: Enter
-    DisableControlAction(1, 71, true) --Key: W (veh_accelerate)
-    DisableControlAction(1, 72, true) --Key: S (veh_brake)
-    DisableControlAction(1, 34, true) --Key: A
-    DisableControlAction(1, 35, true) --Key: D
-    DisableControlAction(1, 75, true) --Key: F (veh_exit)
+function DisableControls(repairOnly)
+    CreateThread(function()
+        while isPlyInBennys do
+            DisableControlAction(1, 38, true) --Key: E
+            DisableControlAction(1, 172, true) --Key: Up Arrow
+            DisableControlAction(1, 173, true) --Key: Down Arrow
+            DisableControlAction(1, 177, true) --Key: Backspace
+            DisableControlAction(1, 176, true) --Key: Enter
+            DisableControlAction(1, 71, true) --Key: W (veh_accelerate)
+            DisableControlAction(1, 72, true) --Key: S (veh_brake)
+            DisableControlAction(1, 34, true) --Key: A
+            DisableControlAction(1, 35, true) --Key: D
+            DisableControlAction(1, 75, true) --Key: F (veh_exit)
 
-    if IsDisabledControlJustReleased(1, 172) then --Key: Arrow Up
-        MenuScrollFunctionality("up")
-        PlaySoundFrontend(-1, "NAV_UP_DOWN", "HUD_FRONTEND_DEFAULT_SOUNDSET", 1)
-    end
-
-    if IsDisabledControlJustReleased(1, 173) then --Key: Arrow Down
-        MenuScrollFunctionality("down")
-        PlaySoundFrontend(-1, "NAV_UP_DOWN", "HUD_FRONTEND_DEFAULT_SOUNDSET", 1)
-    end
-
-    if IsDisabledControlJustReleased(1, 176) then --Key: Enter
-        MenuManager(true)
-        PlaySoundFrontend(-1, "OK", "HUD_FRONTEND_DEFAULT_SOUNDSET", 1)
-    end
-
-    if IsDisabledControlJustReleased(1, 177) then --Key: Backspace
-        MenuManager(false)
-        PlaySoundFrontend(-1, "NO", "HUD_FRONTEND_DEFAULT_SOUNDSET", 1)
-    end
-end
-
--- #MarkedForMarker
---#[Citizen Threads]#--
-CreateThread(function()
-    while true do
-        local plyPed = PlayerPedId()
-
-        if IsPedInAnyVehicle(plyPed, false) then
-            local plyPos = GetEntityCoords(plyPed)
-            for k, v in pairs(bennyGarages) do
-
-                nearDefault = isNear(plyPos, vector3(v.coords.x,v.coords.y,v.coords.z), 10)
-
-                if nearDefault then
-                    if not isPlyInBennys and nearDefault then
-                        DrawMarker(21, v.coords.x, v.coords.y, v.coords.z + 0.5, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 148, 0, 211, 255, true, false, 2, true, nil, nil, false)
-                    end
-
-                    bennyLocation = vector3(v.coords.x, v.coords.y, v.coords.z)
-
-                    if nearDefault then
-                        if not isPlyInBennys then
-                            Draw3DText(v.coords.x, v.coords.y, v.coords.z + 0.5, "[Press ~p~E~w~ - Enter Benny's Motorworks]", 255, 255, 255, 255, 4, 0.45, true, true, true, true, 0, 0, 0, 0, 55)
-                            if IsControlJustReleased(1, 38) then
-				if GetPedInVehicleSeat(GetVehiclePedIsIn(PlayerPedId()), -1) == PlayerPedId() then
-					if (v.useJob and isAuthorized((QBCore.Functions.GetPlayerData().job.name), k)) or not v.useJob then
-					    TriggerEvent('event:control:bennys', k)
-					else
-					    QBCore.Functions.Notify("You are not authorized", "error")
-					end
-				end
-                            end
-                        else
-                            disableControls()
-                        end
-                    end
-                end
+            if IsDisabledControlJustReleased(1, 172) then --Key: Arrow Up
+                MenuScrollFunctionality("up")
+                PlaySoundFrontend(-1, "NAV_UP_DOWN", "HUD_FRONTEND_DEFAULT_SOUNDSET", 1)
             end
-        else
-            Wait(2000)
+
+            if IsDisabledControlJustReleased(1, 173) then --Key: Arrow Down
+                MenuScrollFunctionality("down")
+                PlaySoundFrontend(-1, "NAV_UP_DOWN", "HUD_FRONTEND_DEFAULT_SOUNDSET", 1)
+            end
+
+            if IsDisabledControlJustReleased(1, 176) then --Key: Enter
+                MenuManager(true, repairOnly)
+                PlaySoundFrontend(-1, "OK", "HUD_FRONTEND_DEFAULT_SOUNDSET", 1)
+            end
+
+            if IsDisabledControlJustReleased(1, 177) then --Key: Backspace
+                MenuManager(false)
+                PlaySoundFrontend(-1, "NO", "HUD_FRONTEND_DEFAULT_SOUNDSET", 1)
+            end
+
+            Wait(0)
+        end
+    end)
+end
+
+function GetLocations()
+    QBCore.Functions.TriggerCallback("qb-customs:server:GetLocations", function(locations)
+        Config.Locations = locations
+    end)
+end
+
+function CheckForKeypress()
+    if next(CustomsData) then
+        CreateThread(function()
+            while next(CustomsData) and not isPlyInBennys do
+                if IsControlJustReleased(0, 38) and CheckRestrictions(CustomsData.location) then EnterLocation() return end
+                Wait(0)
+            end
+        end)
+    end
+end
+
+-- If a player isnt in a vehicle, when they enter the zone, the closet vehicle is checked
+-- The vehicle is checked if it has collision disabled and nobody in the driver seat
+-- If so it will set the collision to true and unfreeze the entity =D
+function CheckForGhostVehicle()
+    if GetVehiclePedIsIn(PlayerPedId(), false) ~= 0 then return end
+    local closestVehicle, closestDistance = QBCore.Functions.GetClosestVehicle(GetEntityCoords(PlayerPedId()))
+    if closestVehicle ~= -1 and closestDistance < 10.0 and GetEntityCollisionDisabled(closestVehicle) and GetPedInVehicleSeat(closestVehicle, -1) == 0 then
+        FreezeEntityPosition(closestVehicle, false)
+        SetEntityCollision(closestVehicle, true, true)
+    end
+end
+
+function CheckRestrictions(location)
+    local PlayerPed = PlayerPedId()
+    local _location = Config.Locations[location]
+    local restrictions = _location.restrictions
+
+    if Config.Debug then
+        print('***************************************************************************')
+        print('Restriction Debug')
+        print('***************************************************************************')
+    end
+
+    local isEnabled = _location.settings.enabled
+    local vehicle = GetVehiclePedIsIn(PlayerPed, false)
+    local allowedJob = AllowJob(restrictions, PlayerData.job.name)
+    local allowedGang = AllowGang(restrictions, PlayerData.gang.name)
+    local allowedClass = AllowVehicleClass(restrictions, GetVehiclePedIsIn(PlayerPed, false))
+
+    if Config.Debug then
+        print(string.format('Is Enabled: %s\nVehicle: %s\nallowedJob: %s\nallowedGang: %s\nallowedClass: %s', isEnabled, vehicle, allowedJob, allowedGang, allowedClass))
+        print('***************************************************************************')
+    end
+    return isEnabled and vehicle ~= 0 and allowedJob and allowedGang and allowedClass
+end
+
+function SetupInteraction()
+    local text = CustomsData.drawtextui
+    if Config.UseRadial then
+        if not radialMenuItemId then
+            radialMenuItemId = exports['qb-radialmenu']:AddOption({
+                id = 'customs',
+                title = 'Enter Customs',
+                icon = 'wrench',
+                type = 'client',
+                event = 'qb-customs:client:EnterCustoms',
+                shouldClose = true
+            })
+        end
+    else
+        text = '[E] '..text
+        CheckForKeypress()
+    end
+    exports['qb-core']:DrawText(text, 'left')
+end
+
+exports('GetCustomsData', function() if next(CustomsData) ~= nil then return CustomsData else return nil end end)
+-----------------------
+----   Threads     ----
+-----------------------
+
+-- Location Creation
+CreateThread(function()
+    while not PlayerData.job do Wait(2500) end
+    for location, data in pairs(Config.Locations) do
+        -- PolyZone + Drawtext + Locations Management
+        for i, spot in ipairs(data.zones) do
+            local _name = location.."-customs-"..i
+            local newSpot = BoxZone:Create(spot.coords, spot.length, spot.width, {
+                name = _name,
+                -- debugPoly = true,
+                heading = spot.heading,
+                minZ = spot.minZ,
+                maxZ = spot.maxZ,
+            })
+
+            newSpot:onPlayerInOut(function(isPointInside, point)
+                if isPointInside then
+                    CustomsData = {
+                        ['location'] = location,
+                        ['spot'] = _name,
+                        ['coords'] = vector3(spot.coords.x, spot.coords.y, spot.coords.z),
+                        ['heading'] = spot.heading,
+                        ['drawtextui'] = data.drawtextui.text,
+                    }
+                    SetupInteraction()
+                    CheckForGhostVehicle()
+                elseif CustomsData['location'] == location and CustomsData['spot'] == _name then
+                    CustomsData = {}
+                    if Config.UseRadial then
+                        exports['qb-radialmenu']:RemoveOption(radialMenuItemId)
+                        radialMenuItemId = nil
+                    end
+
+                    exports['qb-core']:HideText()
+                end
+            end)
         end
 
-        Wait(1)
+        -- Blips
+        local blipData = data.blip
+        if blipData and blipData.enabled then CreateBlip(blipData) end
     end
 end)
 
---#[Event Handlers]#--
-RegisterNetEvent("qb-customs:purchaseSuccessful", function()
+-----------------------
+---- Client Events ----
+-----------------------
+
+AddEventHandler('onResourceStart', function(resourceName)
+    if resourceName == GetCurrentResourceName() and QBCore.Functions.GetPlayerData() ~= {} then
+        GetLocations()
+    end
+end)
+
+AddEventHandler("onResourceStop", function(resource)
+    if resource == GetCurrentResourceName() and isPlyInBennys then
+        ExitBennys()
+    end
+end)
+
+RegisterNetEvent('QBCore:Client:OnPlayerLoaded', function()
+    PlayerData = QBCore.Functions.GetPlayerData()
+    GetLocations()
+end)
+
+RegisterNetEvent('QBCore:Client:OnGangUpdate', function(gang)
+    PlayerData.gang = gang
+end)
+
+RegisterNetEvent('QBCore:Client:OnJobUpdate', function(job)
+    PlayerData.job = job
+end)
+
+RegisterNetEvent('qb-customs:client:UpdateLocation', function(location, type, key, value)
+    Config.Locations[location][type][key] = value
+end)
+
+RegisterNetEvent("qb-customs:client:purchaseSuccessful", function()
     isPurchaseSuccessful = true
     attemptingPurchase = false
     QBCore.Functions.Notify("Purchase Successful")
 end)
 
-RegisterNetEvent("qb-customs:purchaseFailed", function()
+RegisterNetEvent("qb-customs:client:purchaseFailed", function()
     isPurchaseSuccessful = false
     attemptingPurchase = false
     QBCore.Functions.Notify("Not enough money", "error")
 end)
 
+RegisterNetEvent('qb-customs:client:EnterCustoms', function(override)
+    if not override.coords or not override.heading then override = nil end
+    if not IsPedInAnyVehicle(PlayerPedId(), false) or isPlyInBennys or (not next(CustomsData) and not override) then return end
+    if not override and next(CustomsData) and not CheckRestrictions(CustomsData.location) then return end
 
---helper function
-
-function isAuthorized(job, location)
-    for a=1, #bennyGarages[location].job do
-        if job == bennyGarages[location].job[a] then
-            return true
-        end
-    end
-    return false
-end
+    EnterLocation(override)
+end)

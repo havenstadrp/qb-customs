@@ -105,7 +105,7 @@ window.onload = function(e)
                 var val1 = $("." + menu + " .item_selected").attr("class").split(" ")[0];
                 var val2 = $("." + menu + " .item_selected .item1").text();
                 var val3 = $("." + menu + " .item_selected .item2").text();
-                $.post("https://qb-customs/selectedItem", JSON.stringify({
+                $.post(`https://${GetParentResourceName()}/selectedItem`, JSON.stringify({
                     id: val1,
                     item: val2,
                     item2: val3
@@ -131,7 +131,7 @@ window.onload = function(e)
                 var val1 = $("." + menu + " .item_selected").attr("class").split(" ")[0];
                 var val2 = $("." + menu + " .item_selected .item1").text();
                 var val3 = $("." + menu + " .item_selected .item2").text();
-                $.post("https://qb-customs/selectedItem", JSON.stringify({
+                $.post(`https://${GetParentResourceName()}/selectedItem`, JSON.stringify({
                     id: val1,
                     item: val2,
                     item2: val3
@@ -149,7 +149,7 @@ window.onload = function(e)
     function updateItem2TextOnly(menu, id, text)
     {
         $("." + menu + " ." + id + " .item2").text(text);
-        $.post("https://qb-customs/updateItem2", JSON.stringify({
+        $.post(`https://${GetParentResourceName()}/updateItem2`, JSON.stringify({
             item: text
         }));
     }
@@ -165,9 +165,17 @@ window.onload = function(e)
         else if(id != menuStructure[menu].previousSelectedItemID)
         {
             var prevID = menuStructure[menu].previousSelectedItemID
-
-            $("." + menu + " ." + prevID + " .item2").text(menuStructure[menu].items[prevID].item2);
-            menuStructure[menu].itemsArray[prevID + 1].getElementsByClassName("item2")[0].textContent = menuStructure[menu].items[prevID].item2;
+            if(menuStructure[menu].itemsArray[prevID] != undefined) {
+                $("." + menu + " ." + prevID + " .item2").text(menuStructure[menu].items[prevID].item2);
+                menuStructure[menu].itemsArray[prevID].getElementsByClassName("item2")[0].textContent = menuStructure[menu].items[prevID].item2;
+            } else {
+                for (let i = 0; i < menuStructure[menu].itemsArray.length; i++) {
+                    if(menuStructure[menu].itemsArray[i].classList.contains(prevID)) {
+                        $("." + menu + " ." + prevID + " .item2").text(menuStructure[menu].items[prevID].item2);
+                        menuStructure[menu].itemsArray[i].getElementsByClassName("item2")[0].textContent = menuStructure[menu].items[prevID].item2;
+                    }
+                }
+            }
             menuStructure[menu].previousSelectedItemID = id;
 
             $("." + menu + " .item_selected .item2").text(text);
@@ -179,7 +187,7 @@ window.onload = function(e)
             menuStructure[menu].previousSelectedItemID = null
         }
 
-        $.post("https://qb-customs/updateItem2", JSON.stringify({
+        $.post(`https://${GetParentResourceName()}/updateItem2`, JSON.stringify({
             item: text
         }));
     }
@@ -208,7 +216,7 @@ window.onload = function(e)
                     var val1 = $("." + menu + " .item_selected").attr("class").split(" ")[0];
                     var val2 = $("." + menu + " .item_selected .item1").text();
                     var val3 = $("." + menu + " .item_selected .item2").text();
-                    $.post("https://qb-customs/selectedItem", JSON.stringify({
+                    $.post(`https://${GetParentResourceName()}/selectedItem`, JSON.stringify({
                         id: val1,
                         item: val2,
                         item2: val3
@@ -231,7 +239,7 @@ window.onload = function(e)
                     var val1 = $("." + menu + " .item_selected").attr("class").split(" ")[0];
                     var val2 = $("." + menu + " .item_selected .item1").text();
                     var val3 = $("." + menu + " .item_selected .item2").text();
-                    $.post("https://qb-customs/selectedItem", JSON.stringify({
+                    $.post(`https://${GetParentResourceName()}/selectedItem`, JSON.stringify({
                         id: val1,
                         item: val2,
                         item2: val3
@@ -260,7 +268,7 @@ window.onload = function(e)
                     var val1 = $("." + menu + " .item_selected").attr("class").split(" ")[0];
                     var val2 = $("." + menu + " .item_selected .item1").text();
                     var val3 = $("." + menu + " .item_selected .item2").text();
-                    $.post("https://qb-customs/selectedItem", JSON.stringify({
+                    $.post(`https://${GetParentResourceName()}/selectedItem`, JSON.stringify({
                         id: val1,
                         item: val2,
                         item2: val3
@@ -294,7 +302,7 @@ window.onload = function(e)
                     var val1 = $("." + menu + " .item_selected").attr("class").split(" ")[0];
                     var val2 = $("." + menu + " .item_selected .item1").text();
                     var val3 = $("." + menu + " .item_selected .item2").text();
-                    $.post("https://qb-customs/selectedItem", JSON.stringify({
+                    $.post(`https://${GetParentResourceName()}/selectedItem`, JSON.stringify({
                         id: val1,
                         item: val2,
                         item2: val3
@@ -314,7 +322,7 @@ window.onload = function(e)
                     var val1 = $("." + menu + " .item_selected").attr("class").split(" ")[0];
                     var val2 = $("." + menu + " .item_selected .item1").text();
                     var val3 = $("." + menu + " .item_selected .item2").text();
-                    $.post("https://qb-customs/selectedItem", JSON.stringify({
+                    $.post(`https://${GetParentResourceName()}/selectedItem`, JSON.stringify({
                         id: val1,
                         item: val2,
                         item2: val3
@@ -338,7 +346,7 @@ window.onload = function(e)
                     var val1 = $("." + menu + " .item_selected").attr("class").split(" ")[0];
                     var val2 = $("." + menu + " .item_selected .item1").text();
                     var val3 = $("." + menu + " .item_selected .item2").text();
-                    $.post("https://qb-customs/selectedItem", JSON.stringify({
+                    $.post(`https://${GetParentResourceName()}/selectedItem`, JSON.stringify({
                         id: val1,
                         item: val2,
                         item2: val3

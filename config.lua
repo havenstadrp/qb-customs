@@ -1,27 +1,21 @@
-maxVehiclePerformanceUpgrades = 0 -- Set to 0 to have all the upgrades
+Config = Config or {}
+
+Config.Debug = false -- Set to True to enable Debug Prints
+Config.MoneyType = 'bank'
+Config.RepairMoneyType = 'cash'
+Config.UseRadial = false -- Will use qb-radial menu for entering instead of press E
+Config.allowGovPlateIndex = false -- Setting this to true will allow all vehicles to purchase gov plate index "Blue on White #3" (only for emergency vehicles otherwise)
+
+maxVehiclePerformanceUpgrades = 0 -- | All Upgrades: 0 | No Upgrades: -1 | Can be -1 to 4
 vehicleBaseRepairCost = 600
 vehicleRepairCostMultiplier = 1
-moneyType = 'bank'
-
--- Location Configs
--- Add locations here
--- Add jobs specific to the garage.
-bennyGarages = {
-    [1] = {coords = vector4(-211.55, -1324.55, 30.90, 319.73135375977), blip = true, useJob = false, job = {"mechanic", "police"}},
-    [2] = {coords = vector4(109.89, 6627.07, 31.78, 221.7938), blip = true, useJob = true, job = {"mechanic"}}
-}
-
---[[ bennyLocations = {
-    vector4(-211.55, -1324.55, 30.90, 319.731)
-} ]]
 
 -- ADJUST PRICING
-
 vehicleCustomisationPrices = {
     cosmetics = {price = 400},
     respray = {price = 1000},
     performance = {prices = {0, 3250, 5500, 10450, 15250, 20500}},
-    turbo = {price = 15000},
+    turbo = {prices = {0, 15000}},
     wheels = {price = 400},
     customwheels = {price = 600},
     wheelsmoke = {price = 400},
@@ -91,7 +85,7 @@ vehicleWheelOptions = {
     {category = "BespokeWheel", id = 9, wheelID = 23},
     {category = "Dragster", id = 10, wheelID = 23},
     {category = "Street", id = 11, wheelID = 23},
-    {category = "RALLY", id = 12, wheelID = 23}
+    {category = "Rally", id = 12, wheelID = 23},
 }
 
 -- TIRE SMOKE
@@ -102,7 +96,7 @@ vehicleTyreSmokeOptions = {
         r = 254,
         g = 254,
         b = 254
-    }, 
+    },
     {
         name = "Black Smoke",
         r = 1,
@@ -242,7 +236,7 @@ vehicleNeonOptions = {
 -- MAIN COMPONENTS
 
 vehicleCustomisation = {
-    {category = "Spoiler", id = 0}, 
+    {category = "Spoiler", id = 0},
     {category = "Front Bumper", id = 1},
     {category = "Rear Bumper", id = 2},
     {category = "Side Skirt", id = 3},
@@ -281,8 +275,8 @@ vehicleCustomisation = {
     {category = "Fuel Tank", id = 45},
     {category = "Window", id = 46},
     {category = "Livery", id = 48},
-    {category = "Horns", id = 14, 
-        
+    {category = "Horns", id = 14,
+
         hornNames = {
             {name = "Truck Horn", id = 0},
             {name = "Cop Horn", id = 1},
@@ -421,7 +415,7 @@ vehicleResprayOptions = {
             {name = "Ice White", id = 111},
             {name = "Frost White", id = 112}
         }
-    }, 
+    },
     {category = "Metallic", id = 1,
         colours = {{name = "Black", id = 0},
             {name = "Carbon Black", id = 147},
