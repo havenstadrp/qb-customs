@@ -10,7 +10,7 @@ local RepairCosts = {}
 
 local function IsVehicleOwned(plate)
     local retval = false
-    local result = MySQL.Sync.fetchScalar('SELECT plate FROM player_vehicles WHERE plate = ?', {plate})
+    local result = MySQL.scalar.await('SELECT plate FROM player_vehicles WHERE plate = ?', {plate})
     if result then retval = true end
     return retval
 end
@@ -71,7 +71,7 @@ end)
 
 RegisterNetEvent("qb-customs:server:updateVehicle", function(myCar)
     if IsVehicleOwned(myCar.plate) then
-        MySQL.Async.execute('UPDATE player_vehicles SET mods = ? WHERE plate = ?', {json.encode(myCar), myCar.plate})
+        MySQL.update('UPDATE player_vehicles SET mods = ? WHERE plate = ?', {json.encode(myCar), myCar.plate})
     end
 end)
 

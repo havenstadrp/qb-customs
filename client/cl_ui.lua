@@ -948,12 +948,10 @@ end
 
 RegisterNUICallback("selectedItem", function(data, cb)
     updateCurrentMenuItemID(tonumber(data.id), data.item, data.item2)
-
     cb("ok")
 end)
 
 RegisterNUICallback("updateItem2", function(data, cb)
     currentMenuItem2 = data.item
-
     cb("ok")
 end)
