@@ -344,12 +344,12 @@ Config.Locations = {
         },
         categories = {
             repair = true,
-            respray = true,
-            liveries = true,
-            tint = true,
-            extras = true,
-            plate = true,
-            cosmetics = true,
+            respray = false,
+            liveries = false,
+            tint = false,
+            extras = false,
+            plate = false,
+            cosmetics = false,
         },
         drawtextui = {
             text = "MRPD Motorworks",
@@ -372,12 +372,12 @@ Config.Locations = {
         },
         categories = {
             repair = true,
-            respray = true,
-            liveries = true,
-            tint = true,
-            extras = true,
-            plate = true,
-            cosmetics = true,
+            respray = false,
+            liveries = false,
+            tint = false,
+            extras = false,
+            plate = false,
+            cosmetics = false,
         },
         drawtextui = {
             text = "Pillbox Motorworks"
